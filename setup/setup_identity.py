@@ -27,9 +27,9 @@ from pathlib import Path
 
 SOURCE_URL = (
     "https://raw.githubusercontent.com/tegargr28/flop-agent-prep/"
-    "373918c14075457806e6e24d0987ddfaa33e5182/scripts/flop_agent.py"
+    "e0550ae6ebbc1472284be4eb95460dd9f5562e6c/scripts/flop_agent.py"
 )
-SOURCE_SHA256 = "978d54c88604d52ed2b887b40e23f181cf1db115012fdc1a264ed2e218dc5128"
+SOURCE_SHA256 = "26fe61f3700766fa9af17ba0907ba362e225a6f7740208c230d608539571c62d"
 
 
 def ensure_cryptography():
