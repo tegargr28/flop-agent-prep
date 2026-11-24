@@ -1,0 +1,19 @@
+# Keys and secrets - never commit these
+identity.pem
+*.pem
+*.key
+keystore/
+passphrase*
+*.secret
+.env
+.env.*
+!.env.example
+*seed*.txt
+*token*.txt
+wallet.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
