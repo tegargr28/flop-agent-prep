@@ -35,7 +35,7 @@ python scripts/check_system.py
 python scripts/watch_status.py
 ```
 
-Create my identity, once, when I am ready for that step:
+Create my identity, once, when I am ready for that step. On my Windows laptop I do this with `setup/create-identity.bat`: double-click, type a passphrase twice, done. That script downloads the pinned `flop_agent.py` from this repo, checks its SHA256 before running it, and leaves the encrypted key on my machine. From a cloned repo the same step is:
 
 ```
 python scripts/flop_agent.py init
