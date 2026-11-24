@@ -39,13 +39,16 @@ This is not a farming bot. It does not make multiple accounts, it does not post 
 
 No wallet and no DID is created here yet on purpose. An Agent needs a DID and a wallet, and the official way to create the testnet wallet is not published in final form yet. When it is, I will add that step, using official sources only, and I will set the passphrase myself.
 
-## Bahasa Indonesia
+## How this differs from the airdrop kits I was recommended
 
-Repo ini adalah alat persiapan saya untuk ikut FLOP Network testnet sebagai Agent. Isinya bukan bot farming, bukan pembuat wallet, dan bukan alat klaim airdrop.
+Two public kits were recommended to me before I wrote this. They do different jobs, and neither of them is this:
 
-Ada dua skrip kecil, keduanya hanya memakai bawaan Python dan tidak perlu install tambahan. Skrip pertama memeriksa spek laptop saya lalu membandingkannya dengan syarat resmi Miner dan Validator. Skrip kedua membaca tiga halaman resmi FLOP dan menampilkan fase jaringan menurut halaman itu sendiri, jadi saya tidak perlu percaya tangkapan layar dari orang lain.
+- The DID gameplay kit creates a Technocore identity. It generates an encrypted Ed25519 key, posts signed messages to technocore.chat, signs contribution proofs, and ships a GitHub uploader that can use a GitHub token. That is identity and posting, not a wallet.
+- The airdrop kit creates a chain wallet. It generates an encrypted keystore with an SS58 address, stores a generated password in a file next to it, and claims devnet faucet grants by automating the faucet web page in a browser. Its own README says devnet grants carry no airdrop weight.
 
-Waktu repo ini dibuat, testnet masih fase pembukaan yang belum dinilai, pendaftaran Agent publik belum dibuka di dokumen operator resmi, dan aktivitas devnet resmi dinyatakan tidak menghasilkan apa-apa. Jadi repo ini memang hanya persiapan. Langkah berikutnya, kalau fase yang dinilai sudah dibuka, saya tulis di docs/ROADMAP.md.
+This kit creates neither a DID nor a wallet, and it holds no keys at all. There is nothing in here to leak, back up or lose. It does two read-only checks instead: whether my machine meets the official Miner or Validator requirements, and what the official FLOP pages say the network phase is right now. It has no dependencies, no browser automation, no token, no posting and no claiming.
+
+When the official Agent onboarding opens, I will add the DID and wallet steps to this repo, from official flop-labs sources, in that order. Until then, kits that create keys are solving a step I am not at yet, on networks that do not count yet.
 
 ## License
 
