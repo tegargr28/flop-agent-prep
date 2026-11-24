@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Create my FLOP Agent identity</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font-family: system-ui, sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
+  h1 { font-size: 1.4rem; }
+  label { display: block; margin-top: 1rem; font-weight: 600; }
+  input { width: 100%; padding: 0.6rem; font-size: 1rem; box-sizing: border-box; margin-top: 0.3rem; }
+  button { margin-top: 1.2rem; padding: 0.7rem 1.2rem; font-size: 1rem; cursor: pointer; }
+  .note { background: rgba(127,127,127,0.12); padding: 0.8rem 1rem; border-radius: 8px; }
+  .warn { background: rgba(255,170,0,0.15); padding: 0.8rem 1rem; border-radius: 8px; margin-top: 1rem; }
+  .error { color: #c0392b; font-weight: 600; }
+  .mono { font-family: ui-monospace, monospace; word-break: break-all; }
+  #result { display: none; margin-top: 1.5rem; }
+  .row { margin: 0.6rem 0; }
+  .copy { margin-left: 0.5rem; padding: 0.2rem 0.6rem; font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<h1>Create my FLOP Agent identity</h1>
+<p class="note">This page works fully offline and sends nothing anywhere. Your passphrase and your key are created on this device, in this page, and never leave it. The only file produced is an encrypted backup that you download yourself.</p>
+
+<label for="pass1">Passphrase (at least 12 characters)</label>
+<input id="pass1" type="password" autocomplete="new-password">
+<label for="pass2">Repeat the passphrase</label>
+<input id="pass2" type="password" autocomplete="new-password">
+<p id="error" class="error"></p>
+<button id="create">Create my identity</button>
+
+<div id="result">
+  <h2>Your identity is created</h2>
+  <div class="row"><strong>DID</strong><br><span id="did" class="mono"></span><button class="copy" data-copy="did">Copy</button></div>
+  <div class="row"><strong>Wallet (SS58, generic prefix 42)</strong><br><span id="wallet" class="mono"></span><button class="copy" data-copy="wallet">Copy</button></div>
+  <button id="download">Download my encrypted backup file</button>
+  <div class="warn">
+    <strong>Read this before you close the page.</strong>
+    <ul>
+      <li>Write the passphrase down offline, now. There is no recovery: lose the passphrase or the backup file and this identity is gone forever.</li>
+      <li>Do not use this passphrase anywhere else, and never send it to anyone.</li>
+      <li>The DID and the wallet address above are public and safe to share. The backup file is encrypted, but keep it somewhere safe anyway.</li>
+      <li>This address uses the generic Substrate prefix 42. FLOP has not published a final testnet wallet method yet, so do not treat it as a confirmed deposit address.</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+/*__FLOP_CRYPTO__*/
+</script>
+<script>
+"use strict";
+let backupData = null;
+document.getElementById("create").addEventListener("click", async () => {
+  const error = document.getElementById("error");
+  const pass1 = document.getElementById("pass1").value;
+  const pass2 = document.getElementById("pass2").value;
+  error.textContent = "";
+  if (pass1.length < 12) { error.textContent = "The passphrase needs at least 12 characters."; return; }
+  if (pass1 !== pass2) { error.textContent = "The two passphrases do not match."; return; }
+  const button = document.getElementById("create");
+  button.disabled = true;
+  button.textContent = "Creating, this takes a few seconds...";
+  try {
+    const identity = await FlopIdentity.createIdentity(pass1);
+    backupData = identity.backup;
+    document.getElementById("did").textContent = identity.did;
+    document.getElementById("wallet").textContent = identity.wallet;
+    document.getElementById("result").style.display = "block";
+    button.textContent = "Identity created";
+  } catch (e) {
+    error.textContent = "Something went wrong: " + e.message;
+    button.disabled = false;
+    button.textContent = "Create my identity";
+  }
+});
+document.getElementById("download").addEventListener("click", () => {
+  if (!backupData) return;
+  const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: "application/json" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "flop-identity-backup.json";
+  link.click();
+  URL.revokeObjectURL(link.href);
+});
+document.querySelectorAll(".copy").forEach((btn) => {
+  btn.addEventListener("click", async () => {
+    const text = document.getElementById(btn.dataset.copy).textContent;
+    try { await navigator.clipboard.writeText(text); btn.textContent = "Copied"; }
+    catch { btn.textContent = "Select and copy manually"; }
+    setTimeout(() => { btn.textContent = "Copy"; }, 2000);
+  });
+});
+</script>
+</body>
+</html>

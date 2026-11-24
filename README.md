@@ -8,7 +8,8 @@ Status when I last updated this (25 November 2026): the testnet is in an unscore
 
 ## What is inside
 
-- `scripts/flop_agent.py` is the main tool. It creates and uses the identity: `init`, `did`, `wallet`, `say`, `read`, `proof` and `verify-proof`.
+- `scripts/flop_agent.py` is the main tool. It creates and uses the identity: `init`, `did`, `wallet`, `say`, `read`, `proof`, `verify-proof` and `from-backup`.
+- `tools/identity-page/create-identity.html` is a single-file offline page that creates the same identity in a browser: I type my own passphrase into the page, the key is generated on my own device, nothing is sent anywhere, and the page gives me an encrypted backup file. `flop_agent.py from-backup` imports that backup later. The page is built from `page_template.html` and `flop_identity_crypto.js` in the same folder (Ed25519 from RFC 8032, BLAKE2b from RFC 7693, SS58 from the public spec), and `test_crypto.mjs` cross-checks that code against the Python tool.
 - `scripts/check_system.py` checks my own machine and compares it with the official Miner and Validator requirements. Read-only, sends nothing anywhere.
 - `scripts/check_status.py` reads three public official pages and prints what phase they say the network is in.
 - `scripts/watch_status.py` does the same check but keeps a local snapshot and only reports what changed since the last run. Checking three pages by hand every day for up to 90 days is exactly the kind of work a script should do.

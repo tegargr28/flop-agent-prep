@@ -28,6 +28,8 @@ Commands:
   read ROOM       read a Technocore room as JSON
   proof URL COMMIT  sign a contribution proof into proof.json
   verify-proof FILE verify a proof file
+  from-backup FILE  import the offline identity page's encrypted
+                    backup (flop-identity-backup.json) as identity.pem
 
 Notes on the wallet address: FLOP has not yet published a final
 SS58 prefix or a final testnet wallet method. Prefix 42 is the
@@ -56,14 +58,17 @@ import urllib.request
 from pathlib import Path
 
 from cryptography.exceptions import InvalidSignature
-from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import (
     Ed25519PrivateKey,
     Ed25519PublicKey,
 )
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 BASE_URL = "https://technocore.chat"
 PROOF_SCHEMA = "flop-agent-prep/contribution-proof-v1"
+BACKUP_FORMAT = "flop-agent-prep/identity-backup-v1"
 SS58_DEFAULT_PREFIX = 42
 NAME_PATTERN = re.compile(r"[a-z0-9][a-z0-9_-]{0,47}")
 INVISIBLE_CATEGORIES = frozenset({"Cc", "Cf", "Cs", "Co", "Zl", "Zp"})
@@ -135,12 +140,9 @@ def ss58_from_public(raw_public: bytes, prefix: int = SS58_DEFAULT_PREFIX) -> st
     return b58_encode(address_bytes)
 
 
-def create_identity(path: Path, passphrase: str) -> Ed25519PrivateKey:
-    if len(passphrase) < 12:
-        raise ValueError("passphrase must be at least 12 characters")
+def write_key(path: Path, private_key: Ed25519PrivateKey, passphrase: str) -> None:
     if path.exists():
-        raise ValueError(f"identity already exists at {path}; refusing to create a second one")
-    private_key = Ed25519PrivateKey.generate()
+        raise ValueError(f"identity already exists at {path}; refusing to overwrite it")
     pem = private_key.private_bytes(
         serialization.Encoding.PEM,
         serialization.PrivateFormat.PKCS8,
@@ -152,6 +154,13 @@ def create_identity(path: Path, passphrase: str) -> Ed25519PrivateKey:
         os.chmod(path, 0o600)
     except OSError:
         pass
+
+
+def create_identity(path: Path, passphrase: str) -> Ed25519PrivateKey:
+    if len(passphrase) < 12:
+        raise ValueError("passphrase must be at least 12 characters")
+    private_key = Ed25519PrivateKey.generate()
+    write_key(path, private_key, passphrase)
     return private_key
 
 
@@ -162,6 +171,38 @@ def load_identity(path: Path, passphrase: str) -> Ed25519PrivateKey:
     if not isinstance(key, Ed25519PrivateKey):
         raise ValueError("identity file is not an Ed25519 key")
     return key
+
+
+def load_backup_seed(path: Path, passphrase: str) -> Ed25519PrivateKey:
+    """Open a backup made by the offline identity page.
+
+    Format flop-agent-prep/identity-backup-v1: the 32-byte Ed25519 seed
+    encrypted with AES-256-GCM, key from PBKDF2-HMAC-SHA-256. The DID
+    and public key stored next to the ciphertext are checked against
+    the decrypted key, so a tampered backup is refused.
+    """
+    backup = json.loads(path.read_text(encoding="utf-8"))
+    if backup.get("format") != BACKUP_FORMAT:
+        raise ValueError("not a flop-agent-prep identity backup")
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=base64.b64decode(backup["kdf"]["salt"]),
+        iterations=int(backup["kdf"]["iterations"]),
+    )
+    key = kdf.derive(passphrase.encode("utf-8"))
+    seed = AESGCM(key).decrypt(
+        base64.b64decode(backup["cipher"]["iv"]), base64.b64decode(backup["data"]), None
+    )
+    if len(seed) != 32:
+        raise ValueError("backup does not contain a 32-byte seed")
+    private_key = Ed25519PrivateKey.from_private_bytes(seed)
+    raw = public_bytes(private_key)
+    if backup.get("public_key_hex") and backup["public_key_hex"] != raw.hex():
+        raise ValueError("backup public key does not match the decrypted key")
+    if backup.get("did") and backup["did"] != did_from_public(raw):
+        raise ValueError("backup DID does not match the decrypted key")
+    return private_key
 
 
 def ask_passphrase(create: bool = False) -> str:
@@ -276,6 +317,8 @@ def main(argv=None) -> int:
     proof_parser.add_argument("commit")
     verify_parser = sub.add_parser("verify-proof", help="verify a proof file")
     verify_parser.add_argument("file")
+    backup_parser = sub.add_parser("from-backup", help="import the identity page's encrypted backup")
+    backup_parser.add_argument("file")
     args = parser.parse_args(argv)
 
     try:
@@ -294,6 +337,15 @@ def main(argv=None) -> int:
             ok = verify_proof(proof)
             print("valid proof" if ok else "INVALID proof")
             return 0 if ok else 1
+        if args.command == "from-backup":
+            passphrase = ask_passphrase()
+            private_key = load_backup_seed(Path(args.file), passphrase)
+            write_key(key_path(), private_key, passphrase)
+            raw = public_bytes(private_key)
+            print(f"DID:    {did_from_public(raw)}")
+            print(f"Wallet: {ss58_from_public(raw)} (SS58, prefix {SS58_DEFAULT_PREFIX})")
+            print(f"Key:    {key_path()} (imported from the encrypted backup)")
+            return 0
 
         private_key = load_identity(key_path(), ask_passphrase())
         raw = public_bytes(private_key)
