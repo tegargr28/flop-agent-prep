@@ -17,3 +17,7 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+
+# Local tool state - never commit these
+status-snapshot.json
+.flop-agent/
